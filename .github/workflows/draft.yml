@@ -1,0 +1,44 @@
+name: Daily X content agent
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 3 * * *'
+concurrency:
+  group: daily-x-agent
+  cancel-in-progress: false
+jobs:
+  content:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements.txt
+      - name: Generate diverse daily batch
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: gemini-3.6-flash
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+          ENABLE_AUTO_QUEUE: ${{ vars.ENABLE_AUTO_QUEUE }}
+        run: |
+          if [ "$ENABLE_AUTO_QUEUE" = "true" ]; then
+            python daily_agent.py --count 5 --queue
+          else
+            python daily_agent.py --count 5
+          fi
+      - name: Persist successful queue entries
+        if: ${{ always() && vars.ENABLE_AUTO_QUEUE == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f data/daily_state.json ]; then
+            git add data/daily_state.json
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Record daily X queue entries"
+            git push
+          fi

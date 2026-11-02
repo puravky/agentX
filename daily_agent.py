@@ -99,7 +99,7 @@ PREVIOUS/OTHER DRAFTS (do not reuse concept, opening, or rhythm): {json.dumps(pr
 Think of a distinctive topic first. Avoid AI/LLM as the topic unless this category is technical_learning and the research particularly warrants it.
 Be specific and natural. Vary opening and structure. Do NOT use an analogy about renting, houses, fallbacks, APIs or context management.
 Do not invent personal experiences, current events, facts, or named-product claims. No quotes from sources.
-Maximum 280 characters. No links or hashtags. Don't force a question or emoji. Output ONLY the post.
+Maximum260 characters. No links or hashtags. Don't force a question or emoji. Output ONLY the post.
 """
     resp = None
     for attempt in range(5):

@@ -27,10 +27,9 @@ jobs:
 
       # Private persona and posting history
       - name: Checkout private data
-        if: ${{ secrets.PRIVATE_DATA_TOKEN != '' }}
         uses: actions/checkout@v4
         with:
-          repository: puravky/x-agent-data
+          repository: YOUR_USERNAME/x-agent-data
           token: ${{ secrets.PRIVATE_DATA_TOKEN }}
           path: private-data
           persist-credentials: true
@@ -51,7 +50,7 @@ jobs:
           GEMINI_MODEL: gemini-3.6-flash
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
-          AGENT_DATA_DIR: ${{ secrets.PRIVATE_DATA_TOKEN != '' && format('{0}/private-data', github.workspace) || format('{0}/app/data', github.workspace) }}
+          AGENT_DATA_DIR: ${{ github.workspace }}/private-data
           ENABLE_AUTO_QUEUE: ${{ vars.ENABLE_AUTO_QUEUE }}
         run: |
           if [ "$ENABLE_AUTO_QUEUE" = "true" ]; then
@@ -61,7 +60,7 @@ jobs:
           fi
 
       - name: Save private posting history
-        if: ${{ always() && vars.ENABLE_AUTO_QUEUE == 'true' && secrets.PRIVATE_DATA_TOKEN != '' }}
+        if: ${{ always() && vars.ENABLE_AUTO_QUEUE == 'true' }}
         working-directory: private-data
         run: |
           git config user.name "github-actions[bot]"

@@ -1,28 +1,56 @@
-name: Daily X content agent
+
+name: Daily X Content Agent
+
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 3 * * *'
+    # 7:00 AM IST every day
+    - cron: "30 1 * * *"
+
 concurrency:
   group: daily-x-agent
   cancel-in-progress: false
+
 jobs:
-  content:
+  generate-and-schedule:
     runs-on: ubuntu-latest
+
     permissions:
-      contents: write
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # Public source code
+      - name: Checkout agent code
+        uses: actions/checkout@v4
         with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - name: Generate diverse daily batch
+          path: app
+
+      # Private persona and posting history
+      - name: Checkout private data
+        uses: actions/checkout@v4
+        with:
+          repository: puravky/x-agent-data
+          token: ${{ secrets.PRIVATE_DATA_TOKEN }}
+          path: private-data
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: app
+        run: pip install -r requirements.txt
+
+      - name: Generate daily posts
+        working-directory: app
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: gemini-3.6-flash
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+          AGENT_DATA_DIR: ${{ github.workspace }}/private-data
           ENABLE_AUTO_QUEUE: ${{ vars.ENABLE_AUTO_QUEUE }}
         run: |
           if [ "$ENABLE_AUTO_QUEUE" = "true" ]; then
@@ -30,15 +58,17 @@ jobs:
           else
             python daily_agent.py --count 5
           fi
-      - name: Persist successful queue entries
+
+      - name: Save private posting history
         if: ${{ always() && vars.ENABLE_AUTO_QUEUE == 'true' }}
+        working-directory: private-data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if [ -f data/daily_state.json ]; then
-            git add data/daily_state.json
-          fi
+
+          git add daily_state.json
+
           if ! git diff --cached --quiet; then
-            git commit -m "Record daily X queue entries"
+            git commit -m "Update posting history"
             git push
           fi
